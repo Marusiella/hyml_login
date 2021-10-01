@@ -1,8 +1,9 @@
+use actix_session::{CookieSession, Session};
 use actix_web::web;
 use actix_web::{post, App, HttpResponse, HttpServer, Responder};
+use mongodb::{bson::doc, sync::Client};
 use serde::{Deserialize, Serialize};
 use urlencoding::decode;
-use actix_session::{Session, CookieSession};
 
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 struct Login {
@@ -19,7 +20,8 @@ struct Register {
 }
 
 #[post("/login")]
-async fn login(req_body: String) -> impl Responder { // session: Session
+async fn login(req_body: String) -> impl Responder {
+    // session: Session
     let v: Login = match serde_qs::from_str(&req_body) {
         Ok(v) => v,
         Err(_) => return HttpResponse::Ok().body("coś tam kombinujesz  ;("),
@@ -30,7 +32,7 @@ async fn login(req_body: String) -> impl Responder { // session: Session
     // } else {
     //     session.set("counter", 1).unwrap();
     // }
-        
+
     HttpResponse::Ok().body(format!(
         "email: {} \npassword: {}",
         decode(&v.email).unwrap().to_string(),
@@ -48,18 +50,22 @@ async fn register(req_body: String) -> impl Responder {
         }
     };
     if v.password == v.dwa {
-        HttpResponse::Ok().body(format!(
+        let client = Client::with_uri_str("mongodb://localhost:27017").unwrap();
+        let database = client.database("user");
+        let collection = database.collection::<&Register>("users");
+        collection.insert_one(&v, None).unwrap();
+        return HttpResponse::Ok().body(format!(
             "email: {} \npassword: {}\ndwa: {}\nsex: {}",
             decode(&v.email).unwrap().to_string(),
             v.password,
             v.dwa,
             v.sex
-        ))
+        ));
     } else {
-        HttpResponse::Ok().body(format!(r#"<script type="text/javascript">
+        return HttpResponse::Ok().body(format!(r#"<script type="text/javascript">
         window.location.href = "{a}"
     </script>         If you are not redirected automatically, follow this <a href='{a}'>link to example</a>.
-    "#,a="/register_f_not_same_passwd.html"))
+    "#,a="/register_f_not_same_passwd.html"));
     }
 }
 
