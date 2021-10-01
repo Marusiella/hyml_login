@@ -1,6 +1,6 @@
 use actix_session::{CookieSession, Session};
 use actix_web::web;
-use actix_web::{post, App, HttpResponse, HttpServer, Responder};
+use actix_web::{get, post, App, HttpResponse, HttpServer, Responder};
 use mongodb::{bson::doc, sync::Client};
 use serde::{Deserialize, Serialize};
 use urlencoding::decode;
@@ -19,31 +19,118 @@ struct Register {
     sex: String,
 }
 
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
+struct Post {
+    title: String,
+    message: String,
+    date: String,
+    user: String,
+    like: i32,
+}
+
+#[post("/postpost")]
+async fn post(req_body: String) -> impl Responder {
+    let client = Client::with_uri_str("mongodb://localhost:27017").unwrap();
+    let database = client.database("post");
+    let collection = database.collection::<Post>("posts");
+    collection
+        .insert_one(
+            Post {
+                title: "String".to_owned(),
+                message: "String".to_owned(),
+                date: "String".to_owned(),
+                user: "String".to_owned(),
+                like: 2,
+            },
+            None,
+        )
+        .unwrap();
+
+    HttpResponse::Ok()
+}
+
+#[get("/getposts")]
+async fn get_posts() -> impl Responder {
+    let client = Client::with_uri_str("mongodb://localhost:27017").unwrap();
+    let database = client.database("post");
+    let collection = database.collection::<Post>("posts");
+    let mut posts_html = r#"<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Posty</title>
+        <link
+            rel="stylesheet"
+            href="https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css"
+            />
+    </head>
+    <body>
+        <div class="box" style="width: 300px; text-align: center;margin-left: auto;
+        margin-right: auto; margin-top: 30px;">
+            Posty:
+        </div>
+    "#
+    .to_owned();
+    let posts = collection.find(doc! {}, None).unwrap();
+    if collection.find(doc! {}, None).unwrap().count() == 0 {
+        return HttpResponse::Ok().body(
+            r#"<html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <title>Posty</title>
+            <link
+                rel="stylesheet"
+                href="https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css"
+                />
+        </head>
+        <body>
+            <div class="box" style="width: 300px; text-align: center;margin-left: auto;
+            margin-right: auto; margin-top: 30px;">
+                Brak postów :(
+            </div>
+        </body>
+    </html>"#,
+        );
+    } else {
+        for x in posts {
+            posts_html = posts_html
+                + &format!(
+                    r#"<div class="box" style="width: 300px; text-align: center;margin-left: auto;
+            margin-right: auto; margin-top: 30px;">
+                {}
+            </div>"#,
+                    x.unwrap().message
+                );
+        }
+        posts_html = posts_html
+            + r#"</body>
+    </html>"#;
+        return HttpResponse::Ok().body(posts_html);
+    }
+
+    // HttpResponse::Ok()
+}
+
 #[post("/login")]
 async fn login(req_body: String, session: Session) -> impl Responder {
-    // session: Session
     let v: Login = match serde_qs::from_str(&req_body) {
         Ok(v) => v,
         Err(_) => return HttpResponse::Ok().body("coś tam kombinujesz  ;("),
     };
-    // if let Some(count) = session.get::<i32>("counter").unwrap() {
-    //     println!("SESSION value: {}", count);
-    //     session.set("counter", count + 1).unwrap();
-    // } else {
-    //     session.set("counter", 1).unwrap();
-    // }
+
     let client = Client::with_uri_str("mongodb://localhost:27017").unwrap();
     let database = client.database("user");
     let collection = database.collection::<Register>("users");
     let x = collection
         .find_one(doc! {"email":&v.email,"password":&v.password}, None)
         .unwrap();
-    
+
     if x.is_none() {
         return HttpResponse::Ok().body(format!(r#"<script type="text/javascript">
         window.location.href = "{a}"
     </script>         If you are not redirected automatically, follow this <a href='{a}'>link to example</a>.
     "#,a="/login_f_wrong_passwd.html"));
+    } else {
+        session.set(&v.email, &v.password).unwrap()
     }
     HttpResponse::Ok().body(format!(
         "email: {} \npassword: {}\nyour sex: {:?}",
@@ -51,11 +138,12 @@ async fn login(req_body: String, session: Session) -> impl Responder {
         v.password,
         x.unwrap_or_else(|| {
             Register {
-            email: "String".to_owned(),
-            password: "String".to_owned(),
-            dwa: "String".to_owned(),
-            sex: "String".to_owned(),
-        }})
+                email: "String".to_owned(),
+                password: "String".to_owned(),
+                dwa: "String".to_owned(),
+                sex: "String".to_owned(),
+            }
+        })
     ))
 }
 
@@ -70,9 +158,7 @@ async fn register(req_body: String) -> impl Responder {
     let client = Client::with_uri_str("mongodb://localhost:27017").unwrap();
     let database = client.database("user");
     let collection = database.collection::<Register>("users");
-    let x = collection
-        .find_one(doc! {"email":&v.email}, None)
-        .unwrap();
+    let x = collection.find_one(doc! {"email":&v.email}, None).unwrap();
     if !x.is_some() {
         if v.password == v.dwa {
             let client = Client::with_uri_str("mongodb://localhost:27017").unwrap();
@@ -102,19 +188,20 @@ async fn register(req_body: String) -> impl Responder {
         </script>         If you are not redirected automatically, follow this <a href='{a}'>link to example</a>.
         "#,a="/register_user_exist.html"));
     }
-    
 }
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     HttpServer::new(|| {
         App::new()
-            .service(web::scope("/api").service(login).service(register))
             .service(
-                actix_files::Files::new("/", "./html")
-                    .show_files_listing()
-                    .index_file("login.html"),
+                web::scope("/api")
+                    .service(login)
+                    .service(register)
+                    .service(get_posts)
+                    .service(post),
             )
+            .service(actix_files::Files::new("/", "./html").index_file("login.html"))
     })
     .bind("127.0.0.1:8080")?
     .run()
