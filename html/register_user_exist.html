@@ -1,0 +1,101 @@
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>Register</title>
+        <link
+            rel="stylesheet"
+            href="https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css"
+            />
+    </head>
+    <body>
+        <section class="hero is-primary is-fullheight">
+            <div class="hero-body">
+                <div class="container">
+                    <div class="columns is-centered">
+                        <div class="column is-5-tablet is-4-desktop
+                            is-3-widescreen">
+                            <form action="/api/register" method="post"
+                                class="box">
+                                <h1 style="color: red;">Konto już istnieje</h1>
+
+                                <div class="field">
+                                    <b>Rejestracja</b><br /><br />
+                                    <label for="" class="label">Email</label>
+                                    <div class="control has-icons-left">
+                                        <input
+                                            id="email"
+                                            name="email"
+                                            type="email"
+                                            placeholder="e.g.bobsmith@gmail.com"
+                                            class="input"
+                                            required
+                                            />
+                                        <span class="icon is-small is-left">
+                                            <i class="fa fa-envelope"></i>
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="field">
+                                    <label for="" class="label">Hasło</label>
+                                    <div class="control has-icons-left">
+                                        <input
+                                            id="password"
+                                            name="password"
+                                            type="password"
+                                            placeholder="*******"
+                                            class="input"
+                                            required
+                                            />
+                                        <span class="icon is-small is-left">
+                                            <i class="fa fa-lock"></i>
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="field">
+                                    <label for="" class="label">Powtórz hasło</label>
+                                    <div class="control has-icons-left">
+                                        <input
+                                            id="dwa"
+                                            name="dwa"
+                                            type="password"
+                                            placeholder="*******"
+                                            class="input"
+                                            required
+                                            />
+                                        <span class="icon is-small is-left">
+                                            <i class="fa fa-lock"></i>
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="field">
+                                    <div class="select">
+                                        <select id="sex" name="sex">
+                                            <option value="men">Mężczyzna</option>
+                                            <option value="woman">Kuchenka</option>
+                                            <option value="helikopter">Helikopter
+                                                bojowy</option>
+                                        </select>
+                                    </div>
+                                    <!-- <label for="" class="checkbox">
+                    <select id="cars" name="carlist" form="carform">
+                      <option value="men">Mężczyzna</option>
+                      <option value="woman">Kuchenka</option>
+                      <option value="helikopter">Helikopter bojowy</option>
+                    </select>
+                  </label> -->
+                                </div>
+                                <div class="field">
+                                    <button class="button is-success">Login</button>
+                                </div>
+                            </form>
+                            <div class="field box" style="text-align: center">
+                                <a href="login.html" class="button is-warning">Logowanie</a>
+                            </div>
+                            
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </body>
+</html>
