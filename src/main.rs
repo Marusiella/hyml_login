@@ -50,10 +50,20 @@ async fn post(req_body: String) -> impl Responder {
 }
 
 #[get("/getposts")]
-async fn get_posts() -> impl Responder {
+async fn get_posts(session: Session) -> impl Responder {
     let client = Client::with_uri_str("mongodb://localhost:27017").unwrap();
     let database = client.database("post");
     let collection = database.collection::<Post>("posts");
+    if let Some(login) = session.get::<String>("login").ok() {
+        match login {
+            Some(login) => println!("{}", login),
+            None => return HttpResponse::Ok().body(format!(r#"<script type="text/javascript">
+            window.location.href = "{a}"
+        </script>         If you are not redirected automatically, follow this <a href='{a}'>link to example</a>.
+        "#,a="/login_session_lost.html"))
+        }
+    }
+    
     let mut posts_html = r#"<html lang="en">
     <head>
         <meta charset="UTF-8">
@@ -66,10 +76,12 @@ async fn get_posts() -> impl Responder {
     <body>
         <div class="box" style="width: 300px; text-align: center;margin-left: auto;
         margin-right: auto; margin-top: 30px;">
+        Login:
             Posty:
         </div>
     "#
     .to_owned();
+    posts_html = format!(posts_html,login = )
     let posts = collection.find(doc! {}, None).unwrap();
     if collection.find(doc! {}, None).unwrap().count() == 0 {
         return HttpResponse::Ok().body(
@@ -130,21 +142,12 @@ async fn login(req_body: String, session: Session) -> impl Responder {
     </script>         If you are not redirected automatically, follow this <a href='{a}'>link to example</a>.
     "#,a="/login_f_wrong_passwd.html"));
     } else {
-        session.set(&v.email, &v.password).unwrap()
+        session.set("login", &v.email).unwrap()
     }
-    HttpResponse::Ok().body(format!(
-        "email: {} \npassword: {}\nyour sex: {:?}",
-        decode(&v.email).unwrap().to_string(),
-        v.password,
-        x.unwrap_or_else(|| {
-            Register {
-                email: "String".to_owned(),
-                password: "String".to_owned(),
-                dwa: "String".to_owned(),
-                sex: "String".to_owned(),
-            }
-        })
-    ))
+    HttpResponse::Ok().body(format!(r#"<script type="text/javascript">
+        window.location.href = "{a}"
+    </script>         If you are not redirected automatically, follow this <a href='{a}'>link to example</a>.
+    "#,a="/getposts"))
 }
 
 #[post("/register")]
@@ -194,11 +197,12 @@ async fn register(req_body: String) -> impl Responder {
 async fn main() -> std::io::Result<()> {
     HttpServer::new(|| {
         App::new()
+            .wrap(CookieSession::signed(&[0; 32]).secure(false))
+            .service(get_posts)
             .service(
                 web::scope("/api")
                     .service(login)
                     .service(register)
-                    .service(get_posts)
                     .service(post),
             )
             .service(actix_files::Files::new("/", "./html").index_file("login.html"))
