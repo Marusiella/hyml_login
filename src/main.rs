@@ -5,13 +5,13 @@ use mongodb::{bson::doc, sync::Client};
 use serde::{Deserialize, Serialize};
 // use urlencoding::decode;
 
-#[derive(Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Deserialize, Serialize,Clone)]
 struct Login {
     email: String,
     password: String,
 }
 
-#[derive(Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Deserialize, Serialize,Clone)]
 struct Register {
     email: String,
     password: String,
@@ -19,7 +19,7 @@ struct Register {
     sex: String,
 }
 
-#[derive(Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Deserialize, Serialize,Clone)]
 struct Post {
     title: String,
     message: String,
@@ -27,6 +27,7 @@ struct Post {
     user: String,
     like: i32,
 }
+
 
 #[post("/postpost")]
 async fn post(req_body: String) -> impl Responder {
@@ -122,11 +123,13 @@ async fn get_posts(session: Session) -> impl Responder {
         for x in posts {
             posts_html = posts_html
                 + &format!(
-                    r#"<div class="box" style="width: 300px; text-align: center;margin-left: auto;
-            margin-right: auto; margin-top: 30px;">
-                {}
-            </div>"#,
-                    x.unwrap().message
+                    r#"
+                    <div class="box" style="width: 300px; text-align: center;margin-left: auto;
+        margin-right: auto; margin-top: 30px;">
+            {}
+            <h6 style="text-align: right">Date: {}</h6>
+        </div>"#,
+                    x.clone().unwrap().message,&x.unwrap().date
                 );
         }
         posts_html = posts_html
