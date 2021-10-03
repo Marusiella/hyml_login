@@ -3,7 +3,7 @@ use actix_web::web;
 use actix_web::{get, post, App, HttpResponse, HttpServer, Responder};
 use mongodb::{bson::doc, sync::Client};
 use serde::{Deserialize, Serialize};
-use urlencoding::decode;
+// use urlencoding::decode;
 
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 struct Login {
@@ -30,23 +30,27 @@ struct Post {
 
 #[post("/postpost")]
 async fn post(req_body: String) -> impl Responder {
+    let v: Post = match serde_qs::from_str(&req_body) {
+        Ok(v) => v,
+        Err(_) => return HttpResponse::Ok().body("coś tam kombinujesz  ;("),
+    };
     let client = Client::with_uri_str("mongodb://localhost:27017").unwrap();
     let database = client.database("post");
     let collection = database.collection::<Post>("posts");
     collection
         .insert_one(
             Post {
-                title: "String".to_owned(),
-                message: "String".to_owned(),
-                date: "String".to_owned(),
-                user: "String".to_owned(),
-                like: 2,
+                title: v.title,
+                message: v.message,
+                date: v.date,
+                user: v.user,
+                like: 0,
             },
             None,
         )
         .unwrap();
 
-    HttpResponse::Ok()
+    HttpResponse::Ok().body("success")
 }
 
 #[get("/getposts")]
@@ -54,17 +58,29 @@ async fn get_posts(session: Session) -> impl Responder {
     let client = Client::with_uri_str("mongodb://localhost:27017").unwrap();
     let database = client.database("post");
     let collection = database.collection::<Post>("posts");
-    if let Some(login) = session.get::<String>("login").ok() {
-        match login {
-            Some(login) => println!("{}", login),
-            None => return HttpResponse::Ok().body(format!(r#"<script type="text/javascript">
-            window.location.href = "{a}"
-        </script>         If you are not redirected automatically, follow this <a href='{a}'>link to example</a>.
-        "#,a="/login_session_lost.html"))
-        }
+    // if let Some(other_login) = session.get::<String>("login").ok() {
+    //     match other_login {
+    //         Some(other_login) => println!("{}", other_login),
+    //         None => return HttpResponse::Ok().body(format!(r#"<script type="text/javascript">
+    //         window.location.href = "{a}"
+    //     </script>         If you are not redirected automatically, follow this <a href='{a}'>link to example</a>.
+    //     "#,a="/login_session_lost.html"))
+    //     }
+    // }
+    let other_login = session
+        .get::<String>("login")
+        .unwrap_or(Some("none".to_owned()))
+        .unwrap_or("none".to_owned());
+
+    if other_login == String::from("none") {
+        return HttpResponse::Ok().body(format!(r#"<script type="text/javascript">
+             window.location.href = "{a}"
+         </script>         If you are not redirected automatically, follow this <a href='{a}'>link to example</a>.
+         "#,a="/login_session_lost.html"));
     }
-    
-    let mut posts_html = r#"<html lang="en">
+
+    let mut posts_html = format!(
+        r#"<html lang="en">
     <head>
         <meta charset="UTF-8">
         <title>Posty</title>
@@ -76,12 +92,12 @@ async fn get_posts(session: Session) -> impl Responder {
     <body>
         <div class="box" style="width: 300px; text-align: center;margin-left: auto;
         margin-right: auto; margin-top: 30px;">
-        Login:
+        Login: {login}
             Posty:
         </div>
-    "#
-    .to_owned();
-    posts_html = format!(posts_html,login = )
+    "#,
+        login = other_login
+    );
     let posts = collection.find(doc! {}, None).unwrap();
     if collection.find(doc! {}, None).unwrap().count() == 0 {
         return HttpResponse::Ok().body(
