@@ -12,6 +12,7 @@ serde_qs = "0.8.4"
 serde = "*"
 urlencoding = "2.1.0"
 actix-session = "0.4.1"
+env_logger = "*"
 
 [dependencies.mongodb]
 version = "2.0.0"
